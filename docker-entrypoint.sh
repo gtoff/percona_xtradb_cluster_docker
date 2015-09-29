@@ -28,7 +28,7 @@
 # environment variables passed to replace discovery that 
 # Kubernetes provides
 # 
-set -e
+set -vx
 
 HOSTNAME=`hostname`
 
@@ -99,7 +99,7 @@ EOSQL
         fi 
       else
         # use kubectl to get the endpoints from the kube service
-        WSREP_CLUSTER_ADDRESS="gcomm://"`./kubectl describe service zurmo-galera-cluster | grep "Endpoints" | cut -f 3 | sed -e "s|:3306||g"`
+        WSREP_CLUSTER_ADDRESS="gcomm://"`./kubectl describe service zurmo-galera-cluster | grep -E "Endpoints.*3306.*" | cut -f 3 | sed -e "s|:3306||g"`
       fi 
   
       # Ok, now that we went through the trouble of building up a nice
