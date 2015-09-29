@@ -2,7 +2,8 @@
 
 #
 # 
-# Copyright 2015 Patrick Galbraith 
+# Original work Copyright 2015 Patrick Galbraith 
+# Modified work Copyright 2015 Giovanni Toffetti
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -92,50 +93,13 @@ EOSQL
         sed -i -e "s|^#wsrep_node_address \= .*$|wsrep_node_address = ${WSREP_NODE_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf
       fi
 
-      #
-      # DEPRECATED: KUBERNETES_RO_SERVICE_HOST removed from v1. 
-      # if kubernetes (beta?), take advantage of the metadata, unless of course already set
-      #
-      if [ -n "$KUBERNETES_RO_SERVICE_HOST" -a -e './kubectl' -a -z "$WSREP_CLUSTER_ADDRESS" ]; then
-        WSREP_CLUSTER_ADDRESS=gcomm://
-        for node in 1 2 3; do
-          WSREP_NODE=`./kubectl --server=${KUBERNETES_RO_SERVICE_HOST}:${KUBERNETES_RO_SERVICE_PORT} get pods| grep "^pxc-node${node}" | tr -d '\n' | awk '{ print $2 }'`
-          if [ ! -z $WSREP_NODE ]; then
-            if [ $node -gt 1 -a $node != "" ]; then
-              WSREP_NODE=",${WSREP_NODE}"
-            fi
-            WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS}${WSREP_NODE}"
-          fi
-        done
-      fi 
-      #
-      # TODO:
-      # new stuff - this is clunky, yes, and needs to be made dynamic
-      # need copy build docker container with kubectl and use kubernetes
-      # local API to get list of however many nodes are in the cluster
-      # If not set, or user has specified from the pod/rc file to set this,
-      # then get clever. The caveat being that kubernetes RO api has been
-      # depricated
-      #
       if [ -z "$WSREP_CLUSTER_ADDRESS" -o "$WSREP_CLUSTER_ADDRESS" == "gcomm://" ]; then
         if [ -z "$WSREP_CLUSTER_ADDRESS" ]; then
           WSREP_CLUSTER_ADDRESS="gcomm://"
         fi 
-        if [ -n "$PXC_NODE1_SERVICE_HOST" ]; then
-          if [ $(expr "$HOSTNAME" : 'pxc-node1') -eq 0 ]; then
-            WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS}${PXC_NODE1_SERVICE_HOST}"
-          fi
-        fi
-        if [ -n "$PXC_NODE2_SERVICE_HOST" ]; then
-          if [ $(expr "$HOSTNAME" : 'pxc-node2') -eq 0 ]; then
-            WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS},${PXC_NODE2_SERVICE_HOST}"
-          fi
-        fi
-        if [ -n "$PXC_NODE3_SERVICE_HOST" ]; then
-          if [ $(expr "$HOSTNAME" : 'pxc-node3') -eq 0 ]; then
-            WSREP_CLUSTER_ADDRESS="${WSREP_CLUSTER_ADDRESS},${PXC_NODE3_SERVICE_HOST}"
-          fi
-        fi
+      else
+        # use kubectl to get the endpoints from the kube service
+        WSREP_CLUSTER_ADDRESS="gcomm://"`./kubectl describe service zurmo-galera-cluster | grep "Endpoints" | cut -f 3 | sed -e "s|:3306||g"`
       fi 
   
       # Ok, now that we went through the trouble of building up a nice
