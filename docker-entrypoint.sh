@@ -88,18 +88,18 @@ EOSQL
 
       sed -i -e "s|wsrep_sst_auth \= \"sstuser:changethis\"|wsrep_sst_auth = ${WSREP_SST_USER}:${WSREP_SST_PASSWORD}|" /etc/mysql/conf.d/cluster.cnf
 
-      WSREP_NODE_ADDRESS=`ip addr show | grep -E '^[ ]*inet' | grep -m1 global | awk '{ print $2 }' | sed -e 's/\/.*//'`
+      WSREP_NODE_ADDRESS=${COREOS_PRIVATE_IPV4}
       if [ -n "$WSREP_NODE_ADDRESS" ]; then
-        sed -i -e "s|^#wsrep_node_address \= .*$|wsrep_node_address = ${WSREP_NODE_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf
+        sed -i -e "s|^#wsrep_node_address \= .*$|wsrep_node_address = ${WSREP_NODE_ADDRESS}|" /etc/confd/mysql/cluster.cnf.tmpl
       fi
 
       if [ -z "$WSREP_CLUSTER_ADDRESS" -o "$WSREP_CLUSTER_ADDRESS" == "gcomm://" ]; then
         if [ -z "$WSREP_CLUSTER_ADDRESS" ]; then
           WSREP_CLUSTER_ADDRESS="gcomm://"
         fi 
-      else
-        # use kubectl to get the endpoints from the kube service
-        WSREP_CLUSTER_ADDRESS="gcomm://"`./kubectl describe service zurmo-galera-cluster | grep -E "Endpoints.*3306.*" | cut -f 3 | sed -e "s|:3306||g"`
+#      else
+#        # use kubectl to get the endpoints from the kube service
+#        WSREP_CLUSTER_ADDRESS="gcomm://"`./kubectl describe service zurmo-galera-cluster | grep -E "Endpoints.*3306.*" | cut -f 3 | sed -e "s|:3306||g"`
       fi 
   
       # Ok, now that we went through the trouble of building up a nice
@@ -119,4 +119,18 @@ EOSQL
   chown -R mysql:mysql "$DATADIR"
 fi
 
+# Try to make initial configuration every 5 seconds until successful
+until confd -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/cluster.cnf.tmpl; do
+    echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
+    sleep 5
+done
+
+echo "[mysql-cluster] mysql-cluster configuration is now:"
+cat /etc/mysql/conf.d/cluster.cnf
+
 exec "$@"
+
+# Put a continual polling `confd` process into the background to watch
+# for changes every 10 seconds
+confd -interval 10 -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/zurmo_galera_cluster.toml &
+echo "[mysql-cluster] confd is now monitoring etcd for c

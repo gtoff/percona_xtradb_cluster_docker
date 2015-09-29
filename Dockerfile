@@ -34,13 +34,21 @@ RUN { \
 
 VOLUME /var/lib/mysql
 
-COPY kubectl /kubectl
-RUN chmod +x /kubectl
+#COPY kubectl /kubectl
+#RUN chmod +x /kubectl
 COPY my.cnf /etc/mysql/my.cnf
 COPY cluster.cnf /tmp/cluster.cnf
 # need random.sh because otherwise, ENV $RANDOM is not set
 COPY random.sh /tmp/random.sh
 RUN /tmp/random.sh
+
+# add confd
+ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.1/confd-0.7.1-linux-amd64 /usr/local/bin/confd
+RUN chmod u+x /usr/local/bin/confd
+RUN mkdir -p /etc/confd/conf.d && \
+  mkdir -p /etc/confd/templates
+ADD conf.d /etc/confd/mysql/conf.d
+ADD templates /etc/confd/mysql/templates
 
 COPY docker-entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
