@@ -33,10 +33,10 @@ set -vx
 HOSTNAME=`hostname`
 
 if [ "${1:0:1}" = '-' ]; then
-  set -- mysqld "$@"
+  set -- mysqld_safe "$@"
 fi
 
-if [ "$1" = 'mysqld' ]; then
+if [ "$1" = 'mysqld_safe' ]; then
   # read DATADIR from the MySQL config
   DATADIR="$("$@" --verbose --help 2>/dev/null | awk '$1 == "datadir" { print $2; exit }')"
   
@@ -122,10 +122,10 @@ fi
 export ETCD_ENDPOINT=${ETCD_ENDPOINT:-172.17.42.1:4001}
 
 # Try to make initial configuration every 5 seconds until successful
-until confd -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
-    echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
-    sleep 5
-done
+#until confd -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
+#    echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
+#    sleep 5
+#done
 
 echo "[mysql-cluster] mysql-cluster configuration is now:"
 cat /etc/mysql/conf.d/cluster.cnf
@@ -135,4 +135,4 @@ exec "$@"
 # Put a continual polling `confd` process into the background to watch
 # for changes every 10 seconds
 confd -interval 10 -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml &
-echo "[mysql-cluster] confd is now monitoring etcd for c
+echo "[mysql-cluster] confd is now monitoring etcd for changes"
