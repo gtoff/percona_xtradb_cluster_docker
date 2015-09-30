@@ -2,7 +2,7 @@ confdir = "/etc/confd/mysql"
 
 [template]
 
-src = "cluster.cnf.tmpl"
+src = "/etc/confd/mysql/template/cluster.cnf.tmpl"
 
 dest = "/etc/mysql/conf.d/cluster.cnf"
 
