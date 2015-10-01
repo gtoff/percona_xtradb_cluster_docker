@@ -6,7 +6,7 @@ src = "cluster.cnf.tmpl"
 
 dest = "/etc/mysql/conf.d/cluster.cnf"
 
-keys = [ "/services/database" ]
+keys = [ "/components/galera" ]
 
 owner = "root"
 mode = "0554"
