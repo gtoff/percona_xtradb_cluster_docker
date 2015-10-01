@@ -33,10 +33,10 @@ set -vx
 HOSTNAME=`hostname`
 
 if [ "${1:0:1}" = '-' ]; then
-  set -- mysqld_safe "$@"
+  set -- mysqld "$@"
 fi
 
-if [ "$1" = 'mysqld_safe' ]; then
+if [ "$1" = 'mysqld' ]; then
   # read DATADIR from the MySQL config
   DATADIR="$("$@" --verbose --help 2>/dev/null | awk '$1 == "datadir" { print $2; exit }')"
   
@@ -46,6 +46,8 @@ if [ "$1" = 'mysqld_safe' ]; then
       echo >&2 '  Did you forget to add -e MYSQL_ROOT_PASSWORD=... ?'
       exit 1
     fi
+
+    chown -R mysql:mysql "$DATADIR"
 
     echo 'Running mysql_install_db ...'
         mysql_install_db --datadir="$DATADIR"
@@ -116,16 +118,16 @@ EOSQL
     set -- "$@" --init-file="$tempSqlFile"
   fi
   
-  chown -R mysql:mysql "$DATADIR"
+  
 fi
 
 export ETCD_ENDPOINT=${ETCD_ENDPOINT:-172.17.42.1:4001}
 
-# Try to make initial configuration every 5 seconds until successful
-#until confd -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
-#    echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
-#    sleep 5
-#done
+ Try to make initial configuration every 5 seconds until successful
+until confd -verbose -debug -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
+    echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
+    sleep 5
+done
 
 echo "[mysql-cluster] mysql-cluster configuration is now:"
 cat /etc/mysql/conf.d/cluster.cnf
@@ -136,3 +138,5 @@ exec "$@"
 # for changes every 10 seconds
 confd -interval 10 -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml &
 echo "[mysql-cluster] confd is now monitoring etcd for changes"
+
+tail -f /var/log/mysql.log

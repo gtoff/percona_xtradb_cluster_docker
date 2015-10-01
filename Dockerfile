@@ -51,7 +51,8 @@ ADD conf.d /etc/confd/mysql/conf.d
 ADD templates /etc/confd/mysql/templates
 
 COPY docker-entrypoint.sh /entrypoint.sh
+COPY restart_mysql.sh /restart_mysql.sh
 ENTRYPOINT ["/entrypoint.sh"]
 
 EXPOSE 3306 4444 4567 4568
-CMD ["mysqld_safe"]
+CMD ["mysqld"]

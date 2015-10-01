@@ -11,4 +11,4 @@ keys = [ "/services/database" ]
 owner = "root"
 mode = "0554"
 
-reload_cmd = "mysqladmin shutdown ; mysqld_safe"
+reload_cmd = "/restart_mysql.sh"
