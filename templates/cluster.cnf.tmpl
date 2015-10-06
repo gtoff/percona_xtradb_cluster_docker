@@ -1,7 +1,7 @@
 [mysqld]
 
 wsrep_provider = /usr/lib/libgalera_smm.so
-wsrep_cluster_address = gcomm://{{range $dir := lsdir "/components/galera"}}{{$ippath := printf "/services/database/%s/ip" $dir}}{{ getv $ippath }}:4567,{{ end }}
+wsrep_cluster_address = gcomm://{{range $dir := lsdir "/components/galera"}}{{$ippath := printf "/components/galera/%s/ip" $dir}}{{ getv $ippath }},{{ end }}
 binlog_format = ROW
 default_storage_engine = InnoDB
 innodb_autoinc_lock_mode = 2
