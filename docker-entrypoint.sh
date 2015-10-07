@@ -117,6 +117,7 @@ if [ $GALERA_CLUSTER_NODE_ID == 1 ]; then
 #   fi 
     cp /etc/confd/mysql/templates/cluster.cnf.tmpl /etc/mysql/conf.d/cluster.cnf
     sed -i -e "s|^wsrep_cluster_address \= .*$|wsrep_cluster_address = ${WSREP_CLUSTER_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf
+    cat /zurmo.sql >> "$tempSqlFile"
     set -- "$@" --wsrep-new-cluster
 else
     # Try to make initial configuration every 5 seconds until successful

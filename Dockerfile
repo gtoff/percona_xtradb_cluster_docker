@@ -32,7 +32,7 @@ COPY cluster.cnf /tmp/cluster.cnf
 # need random.sh because otherwise, ENV $RANDOM is not set
 #COPY random.sh /tmp/random.sh
 #RUN /tmp/random.sh
- 
+ADD zurmo.sql /zurmo.sql
 
 COPY docker-entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
