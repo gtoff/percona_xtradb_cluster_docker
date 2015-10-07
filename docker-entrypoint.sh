@@ -95,7 +95,7 @@ EOSQL
         sed -i -e "s|^#wsrep_node_address \= .*$|wsrep_node_address = ${WSREP_NODE_ADDRESS}|" /etc/confd/mysql/templates/cluster.cnf.tmpl
       fi
 
-      echo "CREATE USER '${WSREP_SST_USER}'@'localhost' IDENTIFIED BY '${WSREP_SST_PASSWORD}';" >> "$tempSqlFile"
+      echo "CREATE USER '${WSREP_SST_USER}'@'%' IDENTIFIED BY '${WSREP_SST_PASSWORD}';" >> "$tempSqlFile"
       echo "GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '${WSREP_SST_USER}'@'localhost';" >> "$tempSqlFile"
     fi
     echo 'FLUSH PRIVILEGES ;' >> "$tempSqlFile"
@@ -110,6 +110,8 @@ export ETCD_ENDPOINT=${ETCD_ENDPOINT:-172.17.42.1:4001}
 
 # Check if we are primary node (node_id=1)
 if [ $GALERA_CLUSTER_NODE_ID == 1 ]; then
+# FIXME: even if we are node 1, we need to make sure the cluster has not been initialized before.
+# We should probably have a process checking onc initial succesful cluster creation, write to etcd, and simply rejoin the cluster if it's the case
 #   if [ -z "$WSREP_CLUSTER_ADDRESS" ]; then
     WSREP_CLUSTER_ADDRESS="gcomm://"
 #   fi 
