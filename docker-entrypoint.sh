@@ -31,6 +31,7 @@
 set -vx
 
 HOSTNAME=`hostname`
+export tempSqlFile='/tmp/mysql-first-time.sql'
 
 if [ "${1:0:1}" = '-' ]; then
   set -- mysqld "$@"
@@ -40,6 +41,8 @@ if [ "$1" = 'mysqld' ]; then
   # read DATADIR from the MySQL config
   DATADIR="$("$@" --verbose --help 2>/dev/null | awk '$1 == "datadir" { print $2; exit }')"
   
+  export MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-zurmo}
+
   if [ ! -d "$DATADIR/mysql" ]; then
     if [ -z "$MYSQL_ROOT_PASSWORD" -a -z "$MYSQL_ALLOW_EMPTY_PASSWORD" ]; then
       echo >&2 'error: database is uninitialized and MYSQL_ROOT_PASSWORD not set'
@@ -58,18 +61,19 @@ if [ "$1" = 'mysqld' ]; then
     # semicolons (no line breaks or comments are permitted).
     # TODO proper SQL escaping on ALL the things D:
     
-    tempSqlFile='/tmp/mysql-first-time.sql'
+    
     cat > "$tempSqlFile" <<-EOSQL
 DELETE FROM mysql.user ;
 CREATE USER 'root'@'%' IDENTIFIED BY '${MYSQL_ROOT_PASSWORD}' ;
 GRANT ALL ON *.* TO 'root'@'%' WITH GRANT OPTION ;
 DROP DATABASE IF EXISTS test ;
 EOSQL
-    
+    export MYSQL_DATABASE=${MYSQL_DATABASE:-zurmo}
     if [ "$MYSQL_DATABASE" ]; then
       echo "CREATE DATABASE IF NOT EXISTS \`$MYSQL_DATABASE\` ;" >> "$tempSqlFile"
     fi
-    
+    export MYSQL_USER=${MYSQL_USER:-zurmo}
+    export MYSQL_PASSWORD=${MYSQL_PASSWORD:-zurmo}
     if [ "$MYSQL_USER" -a "$MYSQL_PASSWORD" ]; then
       echo "CREATE USER '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD' ;" >> "$tempSqlFile"
       
@@ -77,7 +81,8 @@ EOSQL
         echo "GRANT ALL ON \`$MYSQL_DATABASE\`.* TO '$MYSQL_USER'@'%' ;" >> "$tempSqlFile"
       fi
     fi
-
+    export GALERA_CLUSTER=${GALERA_CLUSTER:-true}
+    export WSREP_SST_PASSWORD=${WSREP_SST_PASSWORD:-zurmo}
     if [ -n "$GALERA_CLUSTER" -a "$GALERA_CLUSTER" = true ]; then
       WSREP_SST_USER=${WSREP_SST_USER:-"sst"}
       if [ -z "$WSREP_SST_PASSWORD" ]; then
@@ -116,20 +121,28 @@ if [ $GALERA_CLUSTER_NODE_ID == 1 ]; then
     WSREP_CLUSTER_ADDRESS="gcomm://"
 #   fi 
     cp /etc/confd/mysql/templates/cluster.cnf.tmpl /etc/mysql/conf.d/cluster.cnf
-    sed -i -e "s|^wsrep_cluster_address \= .*$|wsrep_cluster_address = ${WSREP_CLUSTER_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf
-    cat /zurmo.sql >> "$tempSqlFile"
-    set -- "$@" --wsrep-new-cluster
+    sed -i -e "s|^wsrep_cluster_address \= .*$|wsrep_cluster_address = ${WSREP_CLUSTER_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf    
+    set -- "$1" --wsrep-new-cluster
+    echo "[mysql-cluster] mysql-cluster configuration is now:"
+    cat /etc/mysql/conf.d/cluster.cnf    
+    service mysql start
+    mysql < "$tempSqlFile"
+    mysql $MYSQL_DATABASE --password=$MYSQL_ROOT_PASSWORD < /zurmo.sql
+    service mysql stop
+    exec "$@"
 else
     # Try to make initial configuration every 5 seconds until successful
     until confd -verbose -debug -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
       echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
       sleep 5
     done    
+
+    echo "[mysql-cluster] mysql-cluster configuration is now:"
+    cat /etc/mysql/conf.d/cluster.cnf
+    exec "$@"
 fi 
 
-echo "[mysql-cluster] mysql-cluster configuration is now:"
-cat /etc/mysql/conf.d/cluster.cnf
-exec "$@"
+
 
 #chmod +x /restart_mysql.sh
 

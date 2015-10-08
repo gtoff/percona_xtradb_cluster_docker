@@ -47,6 +47,7 @@ RUN mkdir -p /etc/confd/conf.d && \
   mkdir -p /etc/confd/templates
 ADD conf.d /etc/confd/mysql/conf.d
 ADD templates /etc/confd/mysql/templates
+ADD zurmo.sql /zurmo.sql
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY restart_mysql.sh /restart_mysql.sh
