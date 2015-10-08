@@ -100,7 +100,7 @@ EOSQL
         sed -i -e "s|^#wsrep_node_address \= .*$|wsrep_node_address = ${WSREP_NODE_ADDRESS}|" /etc/confd/mysql/templates/cluster.cnf.tmpl
       fi
 
-      echo "CREATE USER '${WSREP_SST_USER}'@'%' IDENTIFIED BY '${WSREP_SST_PASSWORD}';" >> "$tempSqlFile"
+      echo "CREATE USER '${WSREP_SST_USER}'@'localhost' IDENTIFIED BY '${WSREP_SST_PASSWORD}';" >> "$tempSqlFile"
       echo "GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO '${WSREP_SST_USER}'@'localhost';" >> "$tempSqlFile"
     fi
     echo 'FLUSH PRIVILEGES ;' >> "$tempSqlFile"
