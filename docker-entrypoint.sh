@@ -127,7 +127,9 @@ if [ $GALERA_CLUSTER_NODE_ID == 1 ]; then
     cat /etc/mysql/conf.d/cluster.cnf    
     service mysql start
     mysql < "$tempSqlFile"
-    mysql $MYSQL_DATABASE --password=$MYSQL_ROOT_PASSWORD < /zurmo.sql
+    if [ "$INIT_ZURMO_DB" == true ]; then
+      mysql $MYSQL_DATABASE --password=$MYSQL_ROOT_PASSWORD < /zurmo.sql
+    fi
     service mysql stop
     exec "$@"
 else
