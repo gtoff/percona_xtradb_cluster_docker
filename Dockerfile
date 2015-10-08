@@ -41,13 +41,15 @@ COPY random.sh /tmp/random.sh
 RUN /tmp/random.sh
 
 # add confd
-ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.1/confd-0.7.1-linux-amd64 /usr/local/bin/confd
+#ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.1/confd-0.7.1-linux-amd64 /usr/local/bin/confd
+ADD confd-0.7.1-linux-amd64 /usr/local/bin/confd
 RUN chmod u+x /usr/local/bin/confd
 RUN mkdir -p /etc/confd/conf.d && \
   mkdir -p /etc/confd/templates
 ADD conf.d /etc/confd/mysql/conf.d
 ADD templates /etc/confd/mysql/templates
 ADD zurmo.sql /zurmo.sql
+ADD check_cluster_size.sql /check_cluster_size.sql 
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY restart_mysql.sh /restart_mysql.sh

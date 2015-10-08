@@ -122,23 +122,37 @@ if [ $GALERA_CLUSTER_NODE_ID == 1 ]; then
 #   fi 
     cp /etc/confd/mysql/templates/cluster.cnf.tmpl /etc/mysql/conf.d/cluster.cnf
     sed -i -e "s|^wsrep_cluster_address \= .*$|wsrep_cluster_address = ${WSREP_CLUSTER_ADDRESS}|" /etc/mysql/conf.d/cluster.cnf    
-    set -- "$1" --wsrep-new-cluster
-    echo "[mysql-cluster] mysql-cluster configuration is now:"
-    cat /etc/mysql/conf.d/cluster.cnf    
-    service mysql start
-    mysql < "$tempSqlFile"
-    if [ "$INIT_ZURMO_DB" == true ]; then
-      mysql $MYSQL_DATABASE --password=$MYSQL_ROOT_PASSWORD < /zurmo.sql
-    fi
-    service mysql stop
+    set -- "$@" --wsrep-new-cluster
+    echo "[mysql-galera] mysql-galera configuration is now:"
+    cat /etc/mysql/conf.d/cluster.cnf
     exec "$@"
+elif [ "$INIT_ZURMO_DB" == true ]; then
+    # we don't start a mysqld, but just wait for the cluster to have at least 3 nodes
+    # Try to make initial configuration every 5 seconds until successful
+    until confd -verbose -debug -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
+      echo "[galera-cluster] waiting for confd to create initial mysql-galera configuration."
+      sleep 5
+    done
+    # get a database endpoint from config
+    export DBIP=`cat /etc/mysql/conf.d/cluster.cnf | grep wsrep_cluster_address |  grep -oE '([0-9\.,])+' | awk -F , '{print $2}'`
+    # wait for cluster to reach size 3
+    until [ $(mysql --password=$MYSQL_ROOT_PASSWORD -h $DBIP < check_cluster_size.sql | tail -n 1 | cut -f 2) -gt 2 ]; do 
+      echo "Waiting for cluster to reach size 3" 
+      sleep 5 
+    done
+    # check that DB has not yet been initialized
+    if  [ $(mysql --password=$MYSQL_ROOT_PASSWORD -h $DBIP $MYSQL_DATABASE -e "show tables;" | wc -l) -eq 0 ]; then
+      echo "Database tables do not exist. Initializing database"
+      mysql --password=$MYSQL_ROOT_PASSWORD -h $DBIP $MYSQL_DATABASE < /zurmo.sql
+    fi
+    # TODO: we should use etcd / curl to set the database to status initialized
+    # FIXME: if we don't do anything else the container will die (and probably it's all we want from an init)
 else
     # Try to make initial configuration every 5 seconds until successful
     until confd -verbose -debug -onetime -node $ETCD_ENDPOINT -config-file /etc/confd/mysql/conf.d/zurmo_galera_cluster.toml; do
       echo "[mysql-cluster] waiting for confd to create initial mysql-cluster configuration."
       sleep 5
     done    
-
     echo "[mysql-cluster] mysql-cluster configuration is now:"
     cat /etc/mysql/conf.d/cluster.cnf
     exec "$@"
