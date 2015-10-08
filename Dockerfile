@@ -41,8 +41,7 @@ COPY random.sh /tmp/random.sh
 RUN /tmp/random.sh
 
 # add confd
-#ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.1/confd-0.7.1-linux-amd64 /usr/local/bin/confd
-ADD confd-0.7.1-linux-amd64 /usr/local/bin/confd
+ADD https://github.com/kelseyhightower/confd/releases/download/v0.7.1/confd-0.7.1-linux-amd64 /usr/local/bin/confd
 RUN chmod u+x /usr/local/bin/confd
 RUN mkdir -p /etc/confd/conf.d && \
   mkdir -p /etc/confd/templates
