@@ -13,7 +13,7 @@ ENV TERM linux
 # Sys::Hostname
 # Data::Dumper
 RUN apt-get update 
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y perl --no-install-recommends && rm -rf /var/lib/apt/lists/*
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y perl curl --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # gpg: key 5072E1F5: public key "MySQL Release Engineering <mysql-build@oss.oracle.com>" imported
 RUN apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A

@@ -11,4 +11,4 @@ keys = [ "/components/galera" ]
 owner = "root"
 mode = "0554"
 
-reload_cmd = "/restart_mysql.sh"
+#reload_cmd = "/restart_mysql.sh"
